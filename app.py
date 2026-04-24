@@ -2,99 +2,28 @@ import streamlit as st
 import time
 import pandas as pd
 
-# إعدادات الصفحة وهوية كاهوت البصرية
-st.set_page_config(page_title="Teacher Pro Challenge", page_icon="🎓", layout="centered")
+# 1. إعدادات الهوية البصرية (Kahoot Style)
+st.set_page_config(page_title="تحدي المعلم المبدع", page_icon="🎓", layout="centered")
 
 st.markdown("""
     <style>
     .stApp { background-color: #46178f; color: white; direction: rtl; }
-    .question-box { background-color: white; color: #46178f; padding: 30px; border-radius: 20px; text-align: center; font-size: 28px; font-weight: bold; margin-bottom: 20px; }
-    .stButton>button { width: 100%; height: 80px; font-size: 22px; font-weight: bold; color: white; border-radius: 15px; border: none; }
-    /* ألوان كاهوت الشهيرة للخيارات */
-    div.stButton > button:first-child { background-color: #e21b3c; } /* أحمر */
-    div.stButton > button:nth-child(2) { background-color: #1368ce; } /* أزرق */
+    .question-box { background-color: white; color: #46178f; padding: 25px; border-radius: 15px; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; border: 4px solid #d89e00; }
+    .stButton>button { width: 100%; height: 70px; font-size: 18px; font-weight: bold; color: white; border-radius: 12px; border: 2px solid rgba(255,255,255,0.2); transition: 0.3s; }
+    /* ألوان الخيارات الأربعة */
+    div.stButton > button:first-child { background-color: #e21b3c; } 
+    div.stButton > button:nth-child(2) { background-color: #1368ce; }
+    div.stButton > button:nth-child(3) { background-color: #d89e00; }
+    div.stButton > button:nth-child(4) { background-color: #26890c; }
+    .podium { text-align: center; padding: 20px; background: white; color: #46178f; border-radius: 20px; margin-top: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
-# الأصوات
-def play_sound(url):
-    st.markdown(f'<audio src="{url}" autoplay></audio>', unsafe_allow_html=True)
-
-correct_sound = "https://www.soundjay.com/buttons/sounds/button-3.mp3"
-wrong_sound = "https://www.soundjay.com/buttons/sounds/button-10.mp3"
-
-# الأسئلة
+# 2. قاعدة البيانات (10 أسئلة عالية التفكير + صور)
 if 'questions' not in st.session_state:
     st.session_state.questions = [
-        {"q": "عند حدوث فوضى رقمية داخل الصف، التصرف الأذكى هو:", "opts": ["إغلاق الميكروفونات فوراً", "طرح سؤال تفاعلي مفاجئ"], "a": "طرح سؤال تفاعلي مفاجئ"},
-        {"q": "المعلم المحترف يختار الوسيلة بناءً على:", "opts": ["حداثة التقنية", "خصائص المتعلمين وأهداف الدرس"], "a": "خصائص المتعلمين وأهداف الدرس"},
-        {"q": "الذكاء الاصطناعي في نظر المعلم المحترف هو:", "opts": ["بديل لدور المعلم", "مساعد لتخصيص التعلم"], "a": "مساعد لتخصيص التعلم"}
-    ]
-
-# تهيئة المخزن
-if 'score' not in st.session_state:
-    st.session_state.score = 0
-    st.session_state.current_q = 0
-    st.session_state.game_finished = False
-
-# شاشة البداية
-if 'player_name' not in st.session_state:
-    st.title("🏆 مسابقة المعلم المحترف")
-    st.subheader("إشراف: د. مرام الفايومي")
-    name = st.text_input("أدخل اسمك للمنافسة:")
-    if st.button("دخول اللعبة"):
-        if name:
-            st.session_state.player_name = name
-            st.rerun()
-else:
-    if not st.session_state.game_finished:
-        q = st.session_state.questions[st.session_state.current_q]
-        
-        st.markdown(f"<div class='question-box'>{q['q']}</div>", unsafe_allow_html=True)
-        
-        # عداد السرعة (تفاعلي)
-        st.write("⏱️ الوقت المتبقي للإجابة:")
-        timer_placeholder = st.empty()
-        
-        # عرض الخيارات كأزرار كبيرة
-        col1, col2 = st.columns(2)
-        with col1:
-            btn1 = st.button(q['opts'][0])
-        with col2:
-            btn2 = st.button(q['opts'][1])
-            
-        # منطق الضغط على الأزرار
-        user_choice = None
-        if btn1: user_choice = q['opts'][0]
-        if btn2: user_choice = q['opts'][1]
-
-        if user_choice:
-            if user_choice == q['a']:
-                st.session_state.score += 100
-                play_sound(correct_sound)
-                st.success("إجابة صحيحة! 🎉")
-            else:
-                play_sound(wrong_sound)
-                st.error("إجابة خاطئة! ❌")
-            
-            time.sleep(1)
-            if st.session_state.current_q < len(st.session_state.questions) - 1:
-                st.session_state.current_q += 1
-            else:
-                st.session_state.game_finished = True
-            st.rerun()
-    else:
-        # النتائج النهائية (الترتيب الحقيقي)
-        st.balloons()
-        st.header("📊 لوحة الصدارة النهائية")
-        
-        # ترتيب افتراضي للمشاركين (يمكنك ربطه بقاعدة بيانات لاحقاً)
-        results = [
-            {"الاسم": st.session_state.player_name, "النقاط": st.session_state.score},
-            {"الاسم": "مشارك 1", "النقاط": 250},
-            {"الاسم": "مشارك 2", "النقاط": 180}
-        ]
-        df = pd.DataFrame(results).sort_values(by="النقاط", ascending=False)
-        
-        st.table(df)
-        st.success(f"مبارك للفائز بالمركز الأول: {df.iloc[0]['الاسم']}! 🏆")
+        {"q": "أي الأدوار التالية يمثل 'المعلم كميسر' (Facilitator) في بيئة التعلم الرقمي؟", "img": "https://img.freepik.com/free-vector/teacher-concept-illustration_114360-2166.jpg", "opts": ["إلقاء المحاضرة إلكترونياً بدقة", "تصميم مسارات تعلم ذاتية للطلبة", "مراقبة حضور الطلاب عبر المنصة", "تزويد الطلاب بملخصات جاهزة"], "a": "تصميم مسارات تعلم ذاتية للطلبة"},
+        {"q": "عند تحليل نتائج الاختبار، وجد المعلم فجوة في مهارات التحليل لدى الطلاب، الإجراء الأنسب هو:", "img": "https://img.freepik.com/free-vector/data-extraction-concept-illustration_114360-4766.jpg", "opts": ["إعادة شرح الدرس بنفس الطريقة", "توجيه الطلاب لحفظ المفاهيم الأساسية", "تصميم أنشطة تعتمد على حل المشكلات", "تجاهل النتائج وضيق الوقت"], "a": "تصميم أنشطة تعتمد على حل المشكلات"},
+        {"q": "المعلم الذي يمارس 'التأمل الذاتي' (Reflective Practice) يقوم بـ:", "img": "https://img.freepik.com/free-vector/thought-process-concept-illustration_114360-10145.jpg", "opts": ["مقارنة درجات طلابه بزملائه", "تحليل أداءه التدريسي لتطويره", "الالتزام الحرفي بدليل المعلم", "زيادة عدد الواجبات المنزلية"], "a": "تحليل أداءه التدريسي لتطويره"},
+        {"q": "لتحقيق 'الإدارة الصفية الذكية' في مجموعات العمل، يفضل المعلم:", "img": "https://img.freepik.com/free-vector/team-goals-concept-illustration_114360-5175.jpg", "opts": ["تعيين قادة ثابتين طوال العام", "توزيع المهام بناءً على الميول والقدرات", "منع النقاش الجانبي تماماً", "ترك الطلاب دون تدخل توجيهي"], "a": "توزيع المهام بناءً على الميول والقدرات"},
+        {"q": "أي من هذه الممارسات تعزز 'المواطنة الرقمية' لدى الطلاب؟", "img": "https://img.freepik.com/free-vector/privacy-policy-concept-illustration_114360-7853.jpg", "opts": ["منع استخدام الإنترنت في
