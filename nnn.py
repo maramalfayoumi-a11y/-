@@ -12,7 +12,7 @@ st.markdown("""
     .stApp { background-color: #46178f; color: white; }
     .question-style { background: white; color: #46178f; padding: 25px; border-radius: 15px; text-align: center; font-size: 28px; font-weight: bold; margin-bottom: 20px; border: 4px solid #d89e00; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
     
-    /* أزرار فائقة الوضوح بنص أسود عريض جداً */
+    /* تنسيق الأزرار الافتراضي */
     div.stButton > button {
         background-color: #ffffff !important;
         color: #000000 !important;
@@ -22,13 +22,20 @@ st.markdown("""
         font-weight: 900 !important;
         display: block !important;
     }
+    
+    /* تغيير لون الزر عند "التركيز" أو الضغط ليعرف الطالب ماذا اختار */
+    div.stButton > button:focus {
+        background-color: #ffeb3b !important; /* لون أصفر عند الضغط */
+        border-color: #ff9800 !important;
+    }
+
     .timer-container { text-align: center; margin: 20px 0; }
     .timer-text { font-size: 40px; font-weight: bold; color: #ff4b4b; background: white; border-radius: 50%; width: 100px; height: 100px; line-height: 100px; margin: 0 auto; border: 5px solid #ff4b4b; display: inline-block; }
     .winner-tag { background: #26890c; color: white; padding: 20px; border-radius: 15px; text-align: center; font-size: 26px; margin-top: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. روابط الوسائط (موسيقى وأصوات)
+# 2. روابط الوسائط
 bg_music = "https://www.soundjay.com/free-music/sounds/action-movie-trailer-1.mp3"
 correct_sound = "https://www.soundjay.com/buttons/sounds/button-3.mp3"
 
@@ -36,7 +43,7 @@ def play_audio(url, loop=True):
     loop_attr = "loop" if loop else ""
     st.markdown(f'<audio src="{url}" autoplay {loop_attr}></audio>', unsafe_allow_html=True)
 
-# 3. الأسئلة التربوية الـ 10
+# 3. قاعدة البيانات
 questions = [
     {"q": "أي الأدوار التالية يمثل 'المعلم كميسر' في بيئة التعلم الرقمي؟", "opts": ["إلقاء المحاضرة بدقة", "تصميم مسارات تعلم ذاتية", "مراقبة الحضور فقط", "تزويد الطلاب بملخصات"], "a": "تصميم مسارات تعلم ذاتية"},
     {"q": "المعلم الذي يمارس 'التأمل الذاتي' يقوم بـ:", "opts": ["مقارنة درجات طلابه", "تحليل أداءه لتطويره", "الالتزام بالدليل حرفياً", "زيادة الواجبات المنزلية"], "a": "تحليل أداءه لتطويره"},
@@ -55,33 +62,34 @@ if 'players' not in st.session_state: st.session_state.players = {}
 if 'game_stage' not in st.session_state: st.session_state.game_stage = 'lobby'
 if 'current_q' not in st.session_state: st.session_state.current_q = 0
 if 'time_over' not in st.session_state: st.session_state.time_over = False
+if 'user_choice' not in st.session_state: st.session_state.user_choice = None
 
 # --- شاشة اللوبي ---
 if st.session_state.game_stage == 'lobby':
     st.markdown("<h1 style='text-align: center;'>🎮 قاعة انتظار Teacher Pro</h1>", unsafe_allow_html=True)
-    st.markdown(f"<h4 style='text-align: center;'>تحت إشراف المدربة: مرام الفيومي</h4>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: center;'>بإشراف د. مرام الفيومي</h3>", unsafe_allow_html=True)
     
-    name = st.text_input("📝 اكتب اسمك هنا وانضم:")
-    if st.button("تأكيد الانضمام"):
+    name = st.text_input("📝 سجل اسمك للانضمام:")
+    if st.button("انضمام"):
         if name and name not in st.session_state.players:
             st.session_state.players[name] = 0
             st.session_state.current_user = name
             st.rerun()
     
-    st.write(f"المشاركون حالياً: {', '.join(st.session_state.players.keys())}")
+    st.write(f"المشاركون: {', '.join(st.session_state.players.keys())}")
     if len(st.session_state.players) > 0:
-        if st.button("🚀 انطلاق المسابقة", use_container_width=True):
+        if st.button("🚀 ابدأ التحدي الآن", use_container_width=True):
             st.session_state.game_stage = 'quiz'
             st.rerun()
 
-# --- شاشة الأسئلة (المدة: 10 ثوانٍ) ---
+# --- شاشة الأسئلة ---
 elif st.session_state.game_stage == 'quiz':
     idx = st.session_state.current_q
     if idx < len(questions):
         q = questions[idx]
         play_audio(bg_music)
         
-        st.markdown(f"<div class='question-style'>السؤال {idx+1}: {q['q']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='question-style'>سؤال {idx+1}: {q['q']}</div>", unsafe_allow_html=True)
         
         timer_placeholder = st.empty()
         cols = st.columns(2)
@@ -89,25 +97,30 @@ elif st.session_state.game_stage == 'quiz':
         if not st.session_state.time_over:
             for i, opt in enumerate(q['opts']):
                 with cols[i % 2]:
+                    # زر تفاعلي: إذا ضغط الطالب، يسجل اختياره
                     if st.button(opt, key=f"q{idx}o{i}", use_container_width=True):
-                        if opt == q['a']:
-                            st.session_state.players[st.session_state.current_user] += 100
-                            play_audio(correct_sound, loop=False)
+                        st.session_state.user_choice = opt
             
             # عداد الـ 10 ثوانٍ
             for seconds in range(10, -1, -1):
                 timer_placeholder.markdown(f"<div class='timer-container'><div class='timer-text'>{seconds}</div></div>", unsafe_allow_html=True)
                 time.sleep(1)
             
+            # عند انتهاء الوقت، نحسب النتيجة بناءً على الاختيار الأخير
+            if st.session_state.user_choice == q['a']:
+                st.session_state.players[st.session_state.current_user] += 100
+                play_audio(correct_sound, loop=False)
+            
             st.session_state.time_over = True
             st.rerun()
 
-        # شاشة بعد انتهاء الـ 10 ثوانٍ
         else:
-            st.markdown(f"<div class='winner-tag'>انتهى وقت التفكير! الإجابة الصحيحة: {q['a']}</div>", unsafe_allow_html=True)
-            st.info("دكتورة مرام، بانتظار قرارك للانتقال للسؤال القادم.")
-            if st.button("➡️ السؤال التالي"):
+            st.markdown(f"<div class='winner-tag'>انتهى الوقت! الإجابة الصحيحة هي: {q['a']}</div>", unsafe_allow_html=True)
+            st.write(f"اختيارك كان: {st.session_state.user_choice if st.session_state.user_choice else 'لم تختر شيئاً'}")
+            
+            if st.button("➡️ الانتقال للسؤال التالي"):
                 st.session_state.time_over = False
+                st.session_state.user_choice = None
                 st.session_state.current_q += 1
                 st.rerun()
                 
@@ -118,10 +131,10 @@ elif st.session_state.game_stage == 'quiz':
 # --- الشاشة النهائية ---
 elif st.session_state.game_stage == 'final':
     st.balloons()
-    st.markdown("<h1 style='text-align: center;'>🏆 النتائج النهائية 🏆</h1>", unsafe_allow_html=True)
-    st.markdown(f"<h3 style='text-align: center;'>بإشراف د. مرام الفيومي</h3>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>🏆 منصة التتويج النهائية 🏆</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: center;'>إشراف د. مرام الفيومي</h3>", unsafe_allow_html=True)
     df = pd.DataFrame(st.session_state.players.items(), columns=['الاسم', 'النقاط']).sort_values(by='النقاط', ascending=False)
     st.table(df)
-    if st.button("بدء دورة جديدة"):
+    if st.button("بدء مسابقة جديدة"):
         st.session_state.clear()
         st.rerun()
