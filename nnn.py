@@ -2,144 +2,110 @@ import streamlit as st
 import time
 import pandas as pd
 
-# 1. إعدادات الصفحة وهوية مرام الفيومي التعليمية
-st.set_page_config(page_title="Teacher Pro Quiz", page_icon="🎓", layout="wide")
+# 1. إعدادات الهوية البصرية (د. مرام الفيومي)
+st.set_page_config(page_title="Teacher Pro Master", page_icon="🎓", layout="wide")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700&display=swap');
     * { font-family: 'Cairo', sans-serif; direction: rtl; }
     .stApp { background-color: #46178f; color: white; }
+    .question-style { background: white; color: #46178f; padding: 25px; border-radius: 15px; text-align: center; font-size: 28px; font-weight: bold; margin-bottom: 20px; border: 4px solid #d89e00; }
     
-    /* صندوق السؤال ليكون واضحاً جداً */
-    .question-style { 
-        background: #ffffff; color: #46178f; padding: 30px; 
-        border-radius: 20px; text-align: center; font-size: 30px; 
-        font-weight: bold; margin-bottom: 25px; border: 5px solid #d89e00;
-    }
-
-    /* إصلاح الأزرار لتكون مرئية 100% بدون تمرير الماوس */
+    /* أزرار مضادة للاختفاء: نص أسود واضح جداً على خلفية فاتحة */
     div.stButton > button {
-        background-color: #f0f2f6 !important; /* لون فاتح للخلفية */
-        color: #46178f !important;           /* لون داكن للنص لضمان الرؤية */
+        background-color: #ffffff !important;
+        color: #000000 !important;
         border: 4px solid #d89e00 !important;
-        height: 100px !important;
-        font-size: 24px !important;
+        height: 85px !important;
+        font-size: 22px !important;
         font-weight: 900 !important;
-        border-radius: 15px !important;
-        opacity: 1 !important;
         display: block !important;
-        visibility: visible !important;
     }
-    
-    /* هوية د. مرام في اللوبي */
-    .lobby-card { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 20px; border: 1px solid #d89e00; }
-    .name-bubble { background: white; color: #46178f; padding: 10px 20px; border-radius: 50px; font-weight: bold; margin: 5px; display: inline-block; }
+    .winner-tag { background: #26890c; color: white; padding: 15px; border-radius: 10px; text-align: center; font-size: 24px; margin-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. الأسئلة الـ 10 الاحترافية (عالية التفكير)
-questions_list = [
-    {"q": "أي الممارسات التالية تجسد دور المعلم 'كميسر للتعلم'؟", "opts": ["إلقاء المحاضرة بدقة تامة", "تصميم مسارات تعلم ذاتية مرنة", "مراقبة حضور وغياب الطلبة", "تزويد الطلبة بملخصات جاهزة"], "a": "تصميم مسارات تعلم ذاتية مرنة"},
-    {"q": "المعلم الذي يمارس 'التأمل الذاتي' يهدف أساساً إلى:", "opts": ["مقارنة درجاته مع زملائه", "تحسين ممارساته التدريسية", "الالتزام الحرفي بالكتاب المدرسي", "زيادة كمية الواجبات المنزلية"], "a": "تحسين ممارساته التدريسية"},
-    {"q": "لتحقيق 'إدارة صفية ذكية'، يركز المعلم المحترف على:", "opts": ["تعيين قادة ثابتين للمجموعات", "توزيع الأدوار حسب قدرات الطلبة", "فرض الصمت التام طوال الحصة", "تجنب العمل الجماعي لمنع الضجيج"], "a": "توزيع الأدوار حسب قدرات الطلبة"},
-    {"q": "تعزيز 'المواطنة الرقمية' لدى الطلبة يعني تدريبهم على:", "opts": ["تجنب استخدام الإنترنت نهائياً", "الاستخدام الأخلاقي والآمن للتقنية", "حفظ كلمات المرور بشكل علني", "استخدام المنصات للترفيه فقط"], "a": "الاستخدام الأخلاقي والآمن للتقنية"},
-    {"q": "المعلم المبدع في 'الشراكة المجتمعية' هو الذي:", "opts": ["ينعزل بطلابه داخل أسوار المدرسة", "يشرك المجتمع في تطوير التعلم", "يتواصل مع الأهل عند المشاكل فقط", "يرفض أي تدخل خارجي في الفصل"], "a": "يشرك المجتمع في تطوير التعلم"},
-    {"q": "التغذية الراجعة 'البناءة' هي التي تقدم للطلبة:", "opts": ["نقداً للأخطاء السابقة فقط", "خارطة طريق لتطوير أدائهم", "درجة نهائية دون أي ملاحظات", "مدحاً عاماً غير محدد الأهداف"], "a": "خارطة طريق لتطوير أدائهم"},
-    {"q": "عند تصميم 'بيئة تعلم محفزة'، الأولوية تكون لـ:", "opts": ["فخامة الأثاث والديكور", "الأمان النفسي والاجتماعي للطلبة", "عدد الأجهزة اللوحية المتوفرة", "الهدوء المطبق داخل القاعة"], "a": "الأمان النفسي والاجتماعي للطلبة"},
-    {"q": "التخطيط الفعال للتدريس الناجح ينطلق دائماً من:", "opts": ["بداية الفصل في الكتاب", "الوسائل التعليمية المتوفرة", "نتاجات التعلم المستهدفة", "الوقت المتاح للمحاضرة"], "a": "نتاجات التعلم المستهدفة"},
-    {"q": "المعلم المحترف يدمج التقنية في التعليم بهدف:", "opts": ["توفير جهد الكتابة على السبورة", "تنمية مهارات التفكير العليا", "إشغال الطلبة وقت الفراغ", "عرض الصور ومقاطع الفيديو فقط"], "a": "تنمية مهارات التفكير العليا"},
-    {"q": "الهدف الجوهري لبرنامج 'Teacher Pro' هو صناعة معلم:", "opts": ["خبير في تشغيل الأجهزة فقط", "ملهم ومتمكن تربوياً وتقنياً", "قادر على إنهاء المنهج بسرعة", "متخصص في الطباعة الورقية"], "a": "ملهم ومتمكن تربوياً وتقنياً"}
+# 2. الأسئلة الـ 10
+questions = [
+    {"q": "أي الأدوار التالية يمثل 'المعلم كميسر' في بيئة التعلم الرقمي؟", "opts": ["إلقاء المحاضرة بدقة", "تصميم مسارات تعلم ذاتية", "مراقبة الحضور فقط", "تزويد الطلاب بملخصات"], "a": "تصميم مسارات تعلم ذاتية"},
+    {"q": "المعلم الذي يمارس 'التأمل الذاتي' يقوم بـ:", "opts": ["مقارنة درجات طلابه", "تحليل أداءه لتطويره", "الالتزام بالدليل حرفياً", "زيادة الواجبات المنزلية"], "a": "تحليل أداءه لتطويره"},
+    {"q": "لتحقيق 'الإدارة الصفية الذكية'، يفضل المعلم المحترف:", "opts": ["تعيين قادة ثابتين", "توزيع المهام بناءً على الميول", "منع النقاش الجانبي", "ترك الطلاب دون تدخل"], "a": "توزيع المهام بناءً على الميول"},
+    {"q": "أي الممارسات تعزز 'المواطنة الرقمية' لدى الطلاب؟", "opts": ["منع الإنترنت بالكلية", "نقد وتقييم المحتوى الرقمي", "استخدام المنصات للمرح فقط", "حفظ كلمات المرور علانية"], "a": "نقد وتقييم المحتوى الرقمي"},
+    {"q": "المعلم المحترف في بناء 'الشراكة المجتمعية' هو من:", "opts": ["يتواصل عند المشاكل فقط", "يشرك المجتمع في تطوير البيئة", "ينعزل بطلابه داخل الفصل", "يرفض تدخل أولياء الأمور"], "a": "يشرك المجتمع في تطوير البيئة"},
+    {"q": "التغذية الراجعة 'البناءة' تركز أساساً على:", "opts": ["كشف الأخطاء السابقة", "كيفية تحسين الأداء مستقبلاً", "إعطاء الدرجة النهائية", "مدح الطالب دون توضيح"], "a": "كيفية تحسين الأداء مستقبلاً"},
+    {"q": "عند تصميم 'بيئة تعلم محفزة'، الأولوية تكون لـ:", "opts": ["الديكور والألوان", "الأمان النفسي والاجتماعي", "أحدث أنواع الحواسيب", "الصمت التام للطلاب"], "a": "الأمان النفسي والاجتماعي"},
+    {"q": "التخطيط الفعال للتدريس الناجح يبدأ من:", "opts": ["أول صفحة في الكتاب", "الأنشطة المتوفرة", "نتاجات التعلم المستهدفة", "عدد ساعات المحاضرة"], "a": "نتاجات التعلم المستهدفة"},
+    {"q": "المعلم المبدع يستخدم التقنية في الفصل لـ:", "opts": ["شغل وقت الفراغ", "تعزيز التفكير الناقد والابتكار", "تجنب الكتابة على السبورة", "عرض صور جمالية فقط"], "a": "تعزيز التفكير الناقد والابتكار"},
+    {"q": "الهدف الأسمى من برنامج 'Teacher Pro' هو:", "opts": ["حفظ الأدوات الرقمية", "صناعة معلم ملهم ومتمكن", "الحصول على شهادة حضور", "تعلم الطباعة السريعة"], "a": "صناعة معلم ملهم ومتمكن"}
 ]
 
-# 3. إدارة الجلسة
-if 'players' not in st.session_state: st.session_state.players = []
+# 3. إدارة الحالة (Session State)
+if 'players' not in st.session_state: st.session_state.players = {}
 if 'game_stage' not in st.session_state: st.session_state.game_stage = 'lobby'
-if 'score' not in st.session_state: st.session_state.score = 0
 if 'current_q' not in st.session_state: st.session_state.current_q = 0
+if 'ans_status' not in st.session_state: st.session_state.ans_status = None
 
-# --- شاشة اللوبي (Lobby) ---
+# --- شاشة اللوبي ---
 if st.session_state.game_stage == 'lobby':
-    st.markdown("<h1 style='text-align: center;'>🎓 قاعة انتظار Teacher Pro</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center;'>بإشراف الدكتورة: مرام الفيومي</h3>", unsafe_allow_html=True)
+    st.title("🎮 قاعة انتظار Teacher Pro")
+    st.subheader("بإشراف د. مرام الفيومي")
+    name = st.text_input("📝 انضم الآن باسمك:")
+    if st.button("دخول المسابقة"):
+        if name:
+            st.session_state.players[name] = 0
+            st.session_state.current_user = name
+            st.rerun()
     
-    col_in, col_out = st.columns([1, 1])
-    with col_in:
-        name = st.text_input("📝 اكتب اسمك وانضم للمنافسة:", placeholder="مثال: أحمد")
-        if st.button("انضمام للسباق 🚀"):
-            if name and name not in st.session_state.players:
-                st.session_state.players.append(name)
-                st.session_state.user_name = name
-                st.rerun()
-    with col_out:
-        st.markdown("<div class='lobby-card'>", unsafe_allow_html=True)
-        st.write(f"👥 المتسابقون الآن: {len(st.session_state.players)}")
-        for p in st.session_state.players:
-            st.markdown(f"<span class='name-bubble'>{p}</span>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
+    st.write(f"المتواجدون: {', '.join(st.session_state.players.keys())}")
     if len(st.session_state.players) > 0:
-        st.divider()
-        if st.button("🏁 ابدأ المسابقة الآن!", use_container_width=True):
-            st.session_state.game_stage = 'play'
+        if st.button("🚀 ابدأ المسابقة الآن", use_container_width=True):
+            st.session_state.game_stage = 'quiz'
             st.rerun()
 
-# --- شاشة الأسئلة والنتائج اللحظية ---
-elif st.session_state.game_stage == 'play':
+# --- شاشة الأسئلة ---
+elif st.session_state.game_stage == 'quiz':
     idx = st.session_state.current_q
-    if idx < len(questions_list):
-        q = questions_list[idx]
-        st.markdown(f"<div class='question-style'>سؤال {idx+1}: {q['q']}</div>", unsafe_allow_html=True)
+    if idx < len(questions):
+        q = questions[idx]
+        st.markdown(f"<div class='question-style'>السؤال {idx+1}: {q['q']}</div>", unsafe_allow_html=True)
         
-        start_time = time.time()
+        # إذا لم تتم الإجابة بعد
+        if st.session_state.ans_status is None:
+            cols = st.columns(2)
+            for i, opt in enumerate(q['opts']):
+                with cols[i % 2]:
+                    if st.button(opt, key=f"q{idx}o{i}", use_container_width=True):
+                        if opt == q['a']:
+                            st.session_state.players[st.session_state.current_user] += 100
+                            st.session_state.ans_status = "correct"
+                        else:
+                            st.session_state.ans_status = "wrong"
+                        st.rerun()
         
-        # أزرار مضمونة الظهور (نص غامق خلفية فاتحة)
-        col1, col2 = st.columns(2)
-        with col1:
-            ans1 = st.button(f"🔴 {q['opts'][0]}", key=f"ans_{idx}_1")
-            ans2 = st.button(f"🔵 {q['opts'][1]}", key=f"ans_{idx}_2")
-        with col2:
-            ans3 = st.button(f"🟡 {q['opts'][2]}", key=f"ans_{idx}_3")
-            ans4 = st.button(f"🟢 {q['opts'][3]}", key=f"ans_{idx}_4")
-
-        # معالجة الإجابة
-        user_ans = None
-        if ans1: user_ans = q['opts'][0]
-        if ans2: user_ans = q['opts'][1]
-        if ans3: user_ans = q['opts'][2]
-        if ans4: user_ans = q['opts'][3]
-
-        if user_ans:
-            elapsed = time.time() - start_time
-            if user_ans == q['a']:
-                points = max(100, 1000 - int(elapsed * 50))
-                st.session_state.score += points
-                st.success(f"✅ إجابة صحيحة! بطل السؤال: {st.session_state.user_name} (أسرع إجابة)")
+        # بعد الإجابة: شاشة الانتظار والتعليق
+        else:
+            if st.session_state.ans_status == "correct":
+                st.markdown(f"<div class='winner-tag'>✅ إجابة صحيحة! بطل السؤال هو: {st.session_state.current_user}</div>", unsafe_allow_html=True)
             else:
-                st.error(f"❌ إجابة خاطئة! الصحيح هو: {q['a']}")
+                st.markdown(f"<div class='winner-tag' style='background:#e21b3c;'>❌ إجابة خاطئة! الإجابة الصحيحة كانت: {q['a']}</div>", unsafe_allow_html=True)
             
-            time.sleep(2)
-            st.session_state.current_q += 1
-            st.rerun()
+            st.info("دكتورة مرام، يمكنكِ التعليق الآن قبل الانتقال...")
+            if st.button("➡️ السؤال التالي"):
+                st.session_state.ans_status = None
+                st.session_state.current_q += 1
+                st.rerun()
     else:
-        st.session_state.game_stage = 'finish'
+        st.session_state.game_stage = 'final'
         st.rerun()
 
-# --- شاشة التتويج النهائية ---
-elif st.session_state.game_stage == 'finish':
+# --- الشاشة النهائية ---
+elif st.session_state.game_stage == 'final':
     st.balloons()
-    st.markdown(f"<h1 style='text-align: center; color: #d89e00;'>🎊 منصة التتويج النهائية 🎊</h1>", unsafe_allow_html=True)
-    st.markdown(f"<h2 style='text-align: center;'>إشراف د. مرام الفيومي</h2>", unsafe_allow_html=True)
-    
-    # محاكاة الترتيب العام
-    leaderboard = [
-        {"المركز": "🥇 الأول", "الاسم": st.session_state.user_name, "النقاط": st.session_state.score},
-        {"المركز": "🥈 الثاني", "الاسم": "مشارك مميز", "النقاط": st.session_state.score - 150 if st.session_state.score > 150 else 500},
-        {"المركز": "🥉 الثالث", "الاسم": "مشارك مجتهد", "النقاط": st.session_state.score - 300 if st.session_state.score > 300 else 400}
-    ]
-    
-    st.table(pd.DataFrame(leaderboard))
-    
-    if st.button("العودة للقاعة الرئيسية 🔄"):
+    st.header("🏆 لوحة النتائج النهائية")
+    st.subheader(f"إشراف د. مرام الفيومي")
+    df = pd.DataFrame(st.session_state.players.items(), columns=['الاسم', 'النقاط']).sort_values(by='النقاط', ascending=False)
+    st.table(df)
+    if st.button("إعادة"): 
         st.session_state.clear()
         st.rerun()
