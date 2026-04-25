@@ -12,7 +12,7 @@ st.markdown("""
     .stApp { background-color: #46178f; color: white; }
     .question-style { background: white; color: #46178f; padding: 25px; border-radius: 15px; text-align: center; font-size: 28px; font-weight: bold; margin-bottom: 20px; border: 4px solid #d89e00; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
     
-    /* أزرار واضحة جداً بنص أسود عريض */
+    /* أزرار فائقة الوضوح بنص أسود عريض جداً */
     div.stButton > button {
         background-color: #ffffff !important;
         color: #000000 !important;
@@ -28,7 +28,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. روابط الوسائط (موسيقى حماسية)
+# 2. روابط الوسائط (موسيقى وأصوات)
 bg_music = "https://www.soundjay.com/free-music/sounds/action-movie-trailer-1.mp3"
 correct_sound = "https://www.soundjay.com/buttons/sounds/button-3.mp3"
 
@@ -36,7 +36,7 @@ def play_audio(url, loop=True):
     loop_attr = "loop" if loop else ""
     st.markdown(f'<audio src="{url}" autoplay {loop_attr}></audio>', unsafe_allow_html=True)
 
-# 3. قاعدة البيانات (10 أسئلة)
+# 3. الأسئلة التربوية الـ 10
 questions = [
     {"q": "أي الأدوار التالية يمثل 'المعلم كميسر' في بيئة التعلم الرقمي؟", "opts": ["إلقاء المحاضرة بدقة", "تصميم مسارات تعلم ذاتية", "مراقبة الحضور فقط", "تزويد الطلاب بملخصات"], "a": "تصميم مسارات تعلم ذاتية"},
     {"q": "المعلم الذي يمارس 'التأمل الذاتي' يقوم بـ:", "opts": ["مقارنة درجات طلابه", "تحليل أداءه لتطويره", "الالتزام بالدليل حرفياً", "زيادة الواجبات المنزلية"], "a": "تحليل أداءه لتطويره"},
@@ -59,35 +59,33 @@ if 'time_over' not in st.session_state: st.session_state.time_over = False
 # --- شاشة اللوبي ---
 if st.session_state.game_stage == 'lobby':
     st.markdown("<h1 style='text-align: center;'>🎮 قاعة انتظار Teacher Pro</h1>", unsafe_allow_html=True)
-    st.markdown(f"<h3 style='text-align: center;'>بإشراف د. مرام الفيومي</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h4 style='text-align: center;'>تحت إشراف المدربة: مرام الفيومي</h4>", unsafe_allow_html=True)
     
-    name = st.text_input("📝 سجل اسمك للانضمام:")
-    if st.button("انضمام"):
+    name = st.text_input("📝 اكتب اسمك هنا وانضم:")
+    if st.button("تأكيد الانضمام"):
         if name and name not in st.session_state.players:
             st.session_state.players[name] = 0
             st.session_state.current_user = name
             st.rerun()
     
-    st.write(f"المشاركون: {', '.join(st.session_state.players.keys())}")
+    st.write(f"المشاركون حالياً: {', '.join(st.session_state.players.keys())}")
     if len(st.session_state.players) > 0:
-        if st.button("🚀 ابدأ التحدي الآن", use_container_width=True):
+        if st.button("🚀 انطلاق المسابقة", use_container_width=True):
             st.session_state.game_stage = 'quiz'
             st.rerun()
 
-# --- شاشة الأسئلة (30 ثانية) ---
+# --- شاشة الأسئلة (المدة: 10 ثوانٍ) ---
 elif st.session_state.game_stage == 'quiz':
     idx = st.session_state.current_q
     if idx < len(questions):
         q = questions[idx]
         play_audio(bg_music)
         
-        st.markdown(f"<div class='question-style'>سؤال {idx+1}: {q['q']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='question-style'>السؤال {idx+1}: {q['q']}</div>", unsafe_allow_html=True)
         
-        # العداد التنازلي
         timer_placeholder = st.empty()
-        
-        # عرض الخيارات (تختفي أو تتعطل عند انتهاء الوقت)
         cols = st.columns(2)
+        
         if not st.session_state.time_over:
             for i, opt in enumerate(q['opts']):
                 with cols[i % 2]:
@@ -95,21 +93,20 @@ elif st.session_state.game_stage == 'quiz':
                         if opt == q['a']:
                             st.session_state.players[st.session_state.current_user] += 100
                             play_audio(correct_sound, loop=False)
-                        # لا ننتقل فوراً، ننتظر انتهاء العداد
             
-            # تشغيل عداد الـ 30 ثانية
-            for seconds in range(30, -1, -1):
+            # عداد الـ 10 ثوانٍ
+            for seconds in range(10, -1, -1):
                 timer_placeholder.markdown(f"<div class='timer-container'><div class='timer-text'>{seconds}</div></div>", unsafe_allow_html=True)
                 time.sleep(1)
             
             st.session_state.time_over = True
             st.rerun()
 
-        # شاشة بعد انتهاء الـ 30 ثانية
+        # شاشة بعد انتهاء الـ 10 ثوانٍ
         else:
-            st.markdown(f"<div class='winner-tag'>انتهى الوقت! الإجابة الصحيحة هي: {q['a']}</div>", unsafe_allow_html=True)
-            st.info("دكتورة مرام، يمكنكِ الآن التعليق على السؤال قبل الانتقال.")
-            if st.button("➡️ الانتقال للسؤال التالي"):
+            st.markdown(f"<div class='winner-tag'>انتهى وقت التفكير! الإجابة الصحيحة: {q['a']}</div>", unsafe_allow_html=True)
+            st.info("دكتورة مرام، بانتظار قرارك للانتقال للسؤال القادم.")
+            if st.button("➡️ السؤال التالي"):
                 st.session_state.time_over = False
                 st.session_state.current_q += 1
                 st.rerun()
@@ -121,10 +118,10 @@ elif st.session_state.game_stage == 'quiz':
 # --- الشاشة النهائية ---
 elif st.session_state.game_stage == 'final':
     st.balloons()
-    st.markdown("<h1 style='text-align: center;'>🏆 منصة التتويج النهائية 🏆</h1>", unsafe_allow_html=True)
-    st.markdown(f"<h3 style='text-align: center;'>إشراف د. مرام الفيومي</h3>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>🏆 النتائج النهائية 🏆</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: center;'>بإشراف د. مرام الفيومي</h3>", unsafe_allow_html=True)
     df = pd.DataFrame(st.session_state.players.items(), columns=['الاسم', 'النقاط']).sort_values(by='النقاط', ascending=False)
     st.table(df)
-    if st.button("بدء مسابقة جديدة"):
+    if st.button("بدء دورة جديدة"):
         st.session_state.clear()
         st.rerun()
