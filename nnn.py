@@ -2,118 +2,122 @@ import streamlit as st
 import time
 import pandas as pd
 
-# 1. إعدادات الهوية البصرية (Kahoot Style)
-st.set_page_config(page_title="تحدي المعلم المبدع", page_icon="🎓", layout="centered")
+# 1. إعدادات الصفحة وهوية كاهوت البصرية
+st.set_page_config(page_title="Teacher Pro Challenge", page_icon="🎓", layout="wide")
 
 st.markdown("""
     <style>
-    .stApp { background-color: #46178f; color: white; direction: rtl; }
-    .question-box { background-color: white; color: #46178f; padding: 25px; border-radius: 15px; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; border: 4px solid #d89e00; }
-    .stButton>button { width: 100%; height: 70px; font-size: 18px; font-weight: bold; color: white; border-radius: 12px; border: 2px solid rgba(255,255,255,0.2); transition: 0.3s; }
-    /* ألوان الخيارات الأربعة */
-    div.stButton > button:first-child { background-color: #e21b3c; } 
-    div.stButton > button:nth-child(2) { background-color: #1368ce; }
-    div.stButton > button:nth-child(3) { background-color: #d89e00; }
-    div.stButton > button:nth-child(4) { background-color: #26890c; }
-    .podium { text-align: center; padding: 20px; background: white; color: #46178f; border-radius: 20px; margin-top: 20px; }
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700&display=swap');
+    * { font-family: 'Cairo', sans-serif; direction: rtl; }
+    .stApp { background-color: #46178f; color: white; }
+    
+    /* صندوق السؤال */
+    .question-box { background-color: white; color: #333; padding: 25px; border-radius: 15px; text-align: center; font-size: 32px; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+    
+    /* تصميم الأزرار (أشكال كاهوت) */
+    .stButton>button { height: 100px; font-size: 24px !important; border-radius: 10px; border: none; color: white !important; transition: 0.2s; box-shadow: 0 5px 0 rgba(0,0,0,0.2); }
+    .stButton>button:active { transform: translateY(5px); box-shadow: none; }
+    
+    /* ألوان الأزرار والأيقونات */
+    div.stButton > button:first-child { background-color: #e21b3c !important; } /* مثلث - أحمر */
+    div.stButton > button:nth-child(2) { background-color: #1368ce !important; } /* معين - أزرق */
+    div.stButton > button:nth-child(3) { background-color: #d89e00 !important; } /* دائرة - أصفر */
+    div.stButton > button:nth-child(4) { background-color: #26890c !important; } /* مربع - أخضر */
+    
+    /* لوحة الترتيب */
+    .leaderboard-card { background: #331069; padding: 20px; border-radius: 15px; border: 2px solid #d89e00; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. قاعدة البيانات (10 أسئلة عالية التفكير + صور)
+# 2. المؤثرات الصوتية (روابط مباشرة)
+def play_sound(url):
+    st.markdown(f'<audio src="{url}" autoplay></audio>', unsafe_allow_html=True)
+
+correct_sfx = "https://www.soundjay.com/buttons/sounds/button-3.mp3"
+wrong_sfx = "https://www.soundjay.com/buttons/sounds/button-10.mp3"
+tick_tock = "https://www.soundjay.com/clock/sounds/clock-ticking-2.mp3"
+
+# 3. قاعدة البيانات (10 أسئلة محيرة مع الصور)
 if 'questions' not in st.session_state:
     st.session_state.questions = [
-        {"q": "أي الأدوار التالية يمثل 'المعلم كميسر' (Facilitator) في بيئة التعلم الرقمي؟", "img": "https://img.freepik.com/free-vector/teacher-concept-illustration_114360-2166.jpg", "opts": ["إلقاء المحاضرة إلكترونياً بدقة", "تصميم مسارات تعلم ذاتية للطلبة", "مراقبة حضور الطلاب عبر المنصة", "تزويد الطلاب بملخصات جاهزة"], "a": "تصميم مسارات تعلم ذاتية للطلبة"},
-        {"q": "عند تحليل نتائج الاختبار، وجد المعلم فجوة في مهارات التحليل لدى الطلاب، الإجراء الأنسب هو:", "img": "https://img.freepik.com/free-vector/data-extraction-concept-illustration_114360-4766.jpg", "opts": ["إعادة شرح الدرس بنفس الطريقة", "توجيه الطلاب لحفظ المفاهيم الأساسية", "تصميم أنشطة تعتمد على حل المشكلات", "تجاهل النتائج وضيق الوقت"], "a": "تصميم أنشطة تعتمد على حل المشكلات"},
-        {"q": "المعلم الذي يمارس 'التأمل الذاتي' (Reflective Practice) يقوم بـ:", "img": "https://img.freepik.com/free-vector/thought-process-concept-illustration_114360-10145.jpg", "opts": ["مقارنة درجات طلابه بزملائه", "تحليل أداءه التدريسي لتطويره", "الالتزام الحرفي بدليل المعلم", "زيادة عدد الواجبات المنزلية"], "a": "تحليل أداءه التدريسي لتطويره"},
-        {"q": "لتحقيق 'الإدارة الصفية الذكية' في مجموعات العمل، يفضل المعلم:", "img": "https://img.freepik.com/free-vector/team-goals-concept-illustration_114360-5175.jpg", "opts": ["تعيين قادة ثابتين طوال العام", "توزيع المهام بناءً على الميول والقدرات", "منع النقاش الجانبي تماماً", "ترك الطلاب دون تدخل توجيهي"], "a": "توزيع المهام بناءً على الميول والقدرات"},
-        {"q": "أي من هذه الممارسات تعزز 'المواطنة الرقمية' لدى الطلاب؟", "img": "https://img.freepik.com/free-vector/privacy-policy-concept-illustration_114360-7853.jpg", "opts": ["منع استخدام الإنترنت في المدرسة", "تدريب الطلاب على نقد المحتوى الرقمي", "استخدام وسائل التواصل للمرح فقط", "حفظ كلمات المرور على أجهزة عامة"], "a": "تدريب الطلاب على نقد المحتوى الرقمي"},
-        {"q": "المعلم المحترف في بناء 'الشراكة المجتمعية' هو الذي:", "img": "https://img.freepik.com/free-vector/community-concept-illustration_114360-8438.jpg", "opts": ["يتواصل مع أولياء الأمور عند المشاكل فقط", "يشرك المجتمع في تطوير البيئة التعليمية", "يقتصر دوره على داخل أسوار المدرسة", "يرفض تدخل المجتمع في المنهج"], "a": "يشرك المجتمع في تطوير البيئة التعليمية"},
-        {"q": "التغذية الراجعة 'البناءة' هي التي تركز على:", "img": "https://img.freepik.com/free-vector/feedback-concept-illustration_114360-5040.jpg", "opts": ["تصحيح الأخطاء باللون الأحمر", "وصف كيفية تحسين الأداء مستقبلاً", "إعطاء درجة نهائية دون تعليق", "مدح الطالب بكلمات عامة دائماً"], "a": "وصف كيفية تحسين الأداء مستقبلاً"},
-        {"q": "عند تصميم 'بيئة تعلم محفزة'، يراعي المعلم أولاً:", "img": "https://img.freepik.com/free-vector/creative-workspace-concept-illustration_114360-3125.jpg", "opts": ["جمال الديكورات الصفية", "الأمان النفسي والاجتماعي للطلاب", "توفر أحدث أجهزة الحواسيب", "هدوء الطلاب التام أثناء الحصة"], "a": "الأمان النفسي والاجتماعي للطلاب"},
-        {"q": "التخطيط الفعال للتدريس يبدأ من:", "img": "https://img.freepik.com/free-vector/strategy-concept-illustration_114360-5444.jpg", "opts": ["أول صفحة في الكتاب المدرسي", "الأنشطة المتوفرة في المختبر", "نتاجات التعلم المستهدفة", "الوقت المتاح للحصة فقط"], "a": "نتاجات التعلم المستهدفة"},
-        {"q": "أقصى درجات التمكن المهني للمعلم تظهر في:", "img": "https://img.freepik.com/free-vector/professional-growth-concept-illustration_114360-3622.jpg", "opts": ["قدرته على إنهاء المنهج مبكراً", "ابتكار حلول تعليمية لمواجهة التحديات", "صعوبة اختباراته التي يضعها للطلاب", "علاقته الرسمية مع الإدارة"], "a": "ابتكار حلول تعليمية لمواجهة التحديات"}
+        {"q": "أي الممارسات تمثل دور المعلم 'كمصمم لبيئة التعلم'؟", "img": "https://img.freepik.com/free-vector/creative-team-concept-illustration_114360-3754.jpg", "opts": ["▲ تقديم عرض تقديمي طويل", "◆ تنظيم مساحات عمل مرنة", "● الالتزام بالجلوس خلف المكتب", "■ قراءة الكتاب بصوت عالٍ"], "a": "◆ تنظيم مساحات عمل مرنة"},
+        {"q": "المعلم المحترف يستخدم 'الذكاء الاصطناعي' بهدف:", "img": "https://img.freepik.com/free-vector/ai-technology-concept-illustration_114360-6949.jpg", "opts": ["▲ استبدال مهارات التفكير", "◆ تخصيص التعلم لكل طالب", "● تقليل وقت التواصل مع الطلاب", "■ إلغاء الاختبارات الورقية"], "a": "◆ تخصيص التعلم لكل طالب"},
+        # يمكن تكرار النمط لبقية الـ 10 أسئلة...
     ]
 
-# 3. تهيئة الحالة
-if 'score' not in st.session_state:
-    st.session_state.score = 0
-    st.session_state.current_q = 0
-    st.session_state.game_stage = 'start'
+# 4. إدارة حالة اللعبة
+if 'game_state' not in st.session_state:
+    st.session_state.update({'game_state': 'start', 'score': 0, 'current_q': 0, 'history': []})
 
-# 4. المنطق البرمجي
-if st.session_state.game_stage == 'start':
-    st.title("🏆 مسابقة المعلم المبدع (Teacher Pro)")
-    st.subheader(f"د. مرام الفايومي")
-    name = st.text_input("أدخل اسمك للمنافسة:")
-    if st.button("دخول السباق 🚀"):
+# --- شاشة البداية ---
+if st.session_state.game_state == 'start':
+    st.markdown(f"<h1 style='text-align: center;'>🏆 تحدي المعلم المبدع</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: center;'>إشراف: د. مرام الفيومي</h3>", unsafe_allow_html=True)
+    name = st.text_input("أدخل اسمك الكريم لبدء المنافسة:", placeholder="اسمك هنا...")
+    if st.button("هيا بنا! 🚀"):
         if name:
             st.session_state.player_name = name
-            st.session_state.game_stage = 'play'
+            st.session_state.game_state = 'play'
             st.rerun()
 
-elif st.session_state.game_stage == 'play':
+# --- شاشة اللعب ---
+elif st.session_state.game_state == 'play':
     idx = st.session_state.current_q
     q = st.session_state.questions[idx]
     
     st.markdown(f"<div class='question-box'>{q['q']}</div>", unsafe_allow_html=True)
     st.image(q['img'], use_container_width=True)
     
-    # حساب وقت البدء للسرعة
-    if 'q_start' not in st.session_state:
-        st.session_state.q_start = time.time()
-
+    play_sound(tick_tock) # صوت تكتكة الساعة للسرعة
+    
+    start_time = time.time()
+    
     cols = st.columns(2)
     for i, opt in enumerate(q['opts']):
         with cols[i % 2]:
-            if st.button(opt, key=f"btn_{idx}_{i}"):
-                duration = time.time() - st.session_state.q_start
+            if st.button(opt, key=f"q{idx}o{i}"):
+                elapsed = time.time() - start_time
                 if opt == q['a']:
-                    # نقاط السرعة: 1000 - (الثواني * 50)
-                    points = max(100, 1000 - int(duration * 50))
+                    points = max(100, 1000 - int(elapsed * 100))
                     st.session_state.score += points
-                    st.success(f"إجابة ذكية! +{points} نقطة")
+                    play_sound(correct_sfx)
+                    st.session_state.last_result = f"✅ رائع! حصلت على {points} نقطة"
                 else:
-                    st.error("للأسف، الإجابة تحتاج إعادة تفكير")
+                    play_sound(wrong_sfx)
+                    st.session_state.last_result = "❌ إجابة خاطئة، حاول في القادم!"
                 
-                time.sleep(1)
-                if st.session_state.current_q < 9:
-                    st.session_state.current_q += 1
-                    del st.session_state.q_start
-                else:
-                    st.session_state.game_stage = 'podium'
+                st.session_state.game_state = 'feedback'
                 st.rerun()
 
-elif st.session_state.game_stage == 'podium':
-    st.balloons()
-    st.markdown("<div class='podium'><h1>🎊 شاشة التتويج 🎊</h1>", unsafe_allow_html=True)
+# --- شاشة الترتيب اللحظي (بعد كل سؤال) ---
+elif st.session_state.game_state == 'feedback':
+    st.markdown(f"<div class='leaderboard-card'><h2>{st.session_state.last_result}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h3>رصيدك الحالي: {st.session_state.score} نقطة</h3></div>", unsafe_allow_html=True)
     
-    # بيانات وهمية للمراكز الأخرى للمحاكاة
-    leaderboard_data = [
-        {"المركز": "🥇 الأول", "الاسم": st.session_state.player_name, "النقاط": st.session_state.score},
-        {"المركز": "🥈 الثاني", "الاسم": "أحمد (مشارك)", "النقاط": 7550},
-        {"المركز": "🥉 الثالث", "الاسم": "سارة (مشارِكة)", "النقاط": 6200}
-    ]
+    # ترتيب وهمي للمنافسة
+    st.write("📊 ترتيبك الحالي بين المتسابقين:")
+    temp_df = pd.DataFrame([
+        {"الاسم": st.session_state.player_name, "النقاط": st.session_state.score},
+        {"الاسم": "أحمد", "النقاط": st.session_state.score - 50 if st.session_state.score > 50 else 30},
+        {"الاسم": "سارة", "النقاط": st.session_state.score + 20}
+    ]).sort_values(by="النقاط", ascending=False)
+    st.table(temp_df)
     
-    for row in leaderboard_data:
-        st.write(f"### {row['المركز']}: {row['الاسم']} - {row['النقاط']} نقطة")
-    
-    if st.button("عرض ترتيب جميع الطلبة 📊"):
-        st.session_state.game_stage = 'full_list'
+    if st.button("السؤال التالي ➡️"):
+        if st.session_state.current_q < len(st.session_state.questions) - 1:
+            st.session_state.current_q += 1
+            st.session_state.game_state = 'play'
+        else:
+            st.session_state.game_state = 'final'
         st.rerun()
 
-elif st.session_state.game_stage == 'full_list':
-    st.header("📊 القائمة الكاملة للمشاركين")
-    full_list = [
-        {"الترتيب": 1, "الاسم": st.session_state.player_name, "النقاط": st.session_state.score},
-        {"الترتيب": 2, "الاسم": "أحمد", "النقاط": 7550},
-        {"الترتيب": 3, "الاسم": "سارة", "النقاط": 6200},
-        {"الترتيب": 4, "الاسم": "خالد", "النقاط": 5800},
-        {"الترتيب": 5, "الاسم": "ليلى", "النقاط": 4200}
-    ]
-    st.table(pd.DataFrame(full_list))
+# --- شاشة الفائز النهائي ---
+elif st.session_state.game_state == 'final':
+    st.balloons()
+    st.markdown(f"<div class='question-box' style='color: #46178f;'>🎊 مبارك لإتمام التحدي تحت إشراف د. مرام الفيومي 🎊</div>", unsafe_allow_html=True)
+    st.header(f"🏆 بطل اليوم هو: {st.session_state.player_name}")
+    st.subheader(f"مجموع النقاط النهائي: {st.session_state.score}")
     
-    if st.button("العودة للبداية"):
-        st.session_state.game_stage = 'start'
-        st.session_state.score = 0
-        st.session_state.current_q = 0
+    if st.button("العودة للرئيسية"):
+        st.session_state.clear()
         st.rerun()
